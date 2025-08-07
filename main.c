@@ -1,0 +1,20 @@
+#include <stdio.h>
+#include "helpers/vector.h"
+#include "compiler.h"
+int main()
+{
+    int res = compile_file("./test.c", "./test", 0);
+    if (res == COMPILER_SUCCESS)
+    {
+        printf("everythings compiled fine\n");
+    }
+    else if(res == COMPILER_FAILED_WITH_EORRORS)
+    {
+        printf("Compile failed\n");
+    }
+    else
+    {
+        printf("Unknow response for compile file\n");
+    }
+    return 0;
+}

@@ -1,0 +1,127 @@
+#ifndef PEACH_COMPILER_H
+#define PEACH_COMPILER_H
+
+#include <stdio.h>
+#include <stdbool.h>
+
+struct pos
+{
+    int line;
+    int col;
+    const char *filename;
+};
+
+enum
+{
+   LEXIT_ANALYSIS_SUCESS,
+   LEXIT_ANALYSIS_INPUT_ERROR
+};
+
+#define NUMEBER_CASE \
+        case '0': \
+        case '1': \
+        case '2': \
+        case '3': \
+        case '4': \
+        case '5': \
+        case '6': \
+        case '7': \
+        case '8': \
+        case '9': \
+
+//token 类型
+enum
+{
+    TOKEN_TYPE_IDENTIFIER,
+    TOKEN_TYPE_KEYWORD,
+    TOKEN_TYPE_OPERATOR,
+    TOKEN_TYPE_SYMBOL,
+    TOKEN_TYPE_NUMBER,
+    TOKEN_TYPE_STRING,
+    TOKEN_TYPE_COMMENT,
+    TOKEN_TYPE_NEWLINE
+};
+
+struct token
+{
+    int type;
+    int flag;
+    struct pos pos;
+    union
+    {
+        char cval;
+        const char *sval;
+        unsigned int inum;
+        unsigned long lnum;
+        unsigned long long llnum;
+        void *any;
+    };
+    //一个token和下一个token中间有空格就是正确的
+    bool whitespace;
+    const char *between_brackets;
+
+
+};
+
+struct lex_process;
+typedef char (*LEX_PROCESS_NEXT_CHAR)(struct lex_process *process);
+typedef char (*LEX_PROCESS_PEEK_CHAR)(struct lex_process *process);
+typedef void (*LEX_PROCESS_PUSH_CHAR)(struct lex_process *process, char c);
+
+struct lex_process_functions
+{
+    LEX_PROCESS_NEXT_CHAR next_char;
+    LEX_PROCESS_PEEK_CHAR peek_char;
+    LEX_PROCESS_PUSH_CHAR push_char;
+};
+
+enum {
+    COMPILER_SUCCESS,
+    COMPILER_FAILED_WITH_EORRORS
+};
+
+struct compile_process
+{
+    //The flags in regard to how this file should be compiled
+    int flags;
+    struct pos pos;
+    struct compile_process_input_file
+    {
+        const char *abs_path;
+        FILE *fp;            
+    } c_file;
+    FILE *out_file;
+};
+
+struct lex_process
+{
+    struct pos pos;
+    struct vector *token_vec;
+    struct compile_process *compiler;
+
+    int current_expression_count;
+    struct buffer *parentheses_buffer;
+    struct lex_process_functions *function;
+
+    void *private;
+};
+
+int compile_file(const char *file_nem, const char *out_file, int flags);
+struct compile_process * compile_process_create(const char *file_name, const char *filename_out, int flag);
+char compile_process_next_char(struct lex_process *lex_process);
+char compile_process_peek_char(struct lex_process *lex_process);
+void compile_process_push_char(struct lex_process *lex_process, char c);
+
+void lex_process_free(struct lex_process * process);
+void *lec_process_private(struct lex_process *process);
+struct vector *lex_process_tokens(struct lex_process *process);
+int lex(struct lex_process *process);
+struct lex_process *lex_process_create(struct compile_process *compiler, struct lex_process_functions *functions, void *private);
+
+void compiler_error(struct compile_process *compiler, const char *msg, ...);
+void compiler_warning(struct compile_process *compiler, const char *msg, ...);
+
+struct token* token_create(struct token* _token);
+struct token* read_next_token();
+
+#endif
