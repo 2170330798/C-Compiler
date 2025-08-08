@@ -3,6 +3,11 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
+
+#define S_EQ(str1, str2) \
+        (str1 && str2 && (strcmp(str1, str2)))
+
 
 struct pos
 {
@@ -27,7 +32,37 @@ enum
         case '6': \
         case '7': \
         case '8': \
-        case '9': \
+        case '9'  \
+
+#define OPERATOR_CASE_EXCLUDING_DIVISION \
+    case '+':                           \
+    case '-':                           \
+    case '*':                           \
+    case '>':                           \
+    case '<':                           \
+    case '^':                           \
+    case '%':                           \
+    case '!':                           \
+    case '=':                           \
+    case '~':                           \
+    case '|':                           \
+    case '&':                           \
+    case '(':                           \
+    case '[':                           \
+    case ',':                           \
+    case '.':                           \
+    case '?'                            \
+
+#define SYMBOL_CASE  \
+        case '{':    \
+        case '}':    \
+        case '#':    \
+        case '\\':   \
+        case ']':    \
+        case ')':    \
+        case ':'     \
+
+
 
 //token 类型
 enum
@@ -113,7 +148,7 @@ char compile_process_peek_char(struct lex_process *lex_process);
 void compile_process_push_char(struct lex_process *lex_process, char c);
 
 void lex_process_free(struct lex_process * process);
-void *lec_process_private(struct lex_process *process);
+void *lex_process_private(struct lex_process *process);
 struct vector *lex_process_tokens(struct lex_process *process);
 int lex(struct lex_process *process);
 struct lex_process *lex_process_create(struct compile_process *compiler, struct lex_process_functions *functions, void *private);
@@ -123,5 +158,7 @@ void compiler_warning(struct compile_process *compiler, const char *msg, ...);
 
 struct token* token_create(struct token* _token);
 struct token* read_next_token();
+
+bool token_is_keywords(struct token* token, const char* value);
 
 #endif
