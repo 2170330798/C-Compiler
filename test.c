@@ -1,1 +1,1 @@
-(23+45) (345*23) int float while for 56shjsd fdh struct dskvbl
+int x = 12345L

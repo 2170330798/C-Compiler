@@ -62,7 +62,13 @@ enum
         case ')':    \
         case ':'     \
 
-
+enum
+{
+    NUMBER_TYPE_INT,
+    NUMBER_TYPE_LONG,
+    NUMBER_TYPE_FLOAT,
+    NUMBER_TYPE_DOUBLE,
+};
 
 //token 类型
 enum
@@ -91,11 +97,13 @@ struct token
         unsigned long long llnum;
         void *any;
     };
+    struct token_number
+    {
+        int type;
+    }num;
     //一个token和下一个token中间有空格就是正确的
     bool whitespace;
     const char *between_brackets;
-
-
 };
 
 struct lex_process;
@@ -125,6 +133,9 @@ struct compile_process
         const char *abs_path;
         FILE *fp;            
     } c_file;
+
+    //A vector of tokens from lexical analysis.
+    struct vector* token_vec;
     FILE *out_file;
 };
 
@@ -158,6 +169,15 @@ void compiler_warning(struct compile_process *compiler, const char *msg, ...);
 
 struct token* token_create(struct token* _token);
 struct token* read_next_token();
+
+/**
+ * @brief Builds tokens for the input string
+ * @param compiler
+ * @param str
+ * @return struct lex_process*
+ */
+struct lex_process* tokens_build_for_string(struct compile_process* compiler, const char* str);
+
 
 bool token_is_keywords(struct token* token, const char* value);
 

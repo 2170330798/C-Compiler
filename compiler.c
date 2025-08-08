@@ -46,6 +46,7 @@ int compile_file(const char *file_name, const char *out_file, int flags)
     {
         return COMPILER_FAILED_WITH_EORRORS;
     }
+    process->token_vec = lex_process->token_vec;
     //Preform parsing
 
     //Preform code generation
