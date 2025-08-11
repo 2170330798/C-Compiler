@@ -310,6 +310,18 @@ struct token* token_make_symbol()
     return token;
 }
 
+bool keyword_is_datatype(const char* str)
+{
+    return S_EQ(str, "void") ||
+           S_EQ(str, "char") ||
+           S_EQ(str, "int") ||
+           S_EQ(str, "float") ||
+           S_EQ(str, "double") || 
+           S_EQ(str, "long") || 
+           S_EQ(str, "struct") ||
+           S_EQ(str, "union");
+}
+
 bool is_keywords(const char* str)
 {
     //int short float double....
