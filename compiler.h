@@ -136,6 +136,9 @@ struct compile_process
 
     //A vector of tokens from lexical analysis.
     struct vector* token_vec;
+
+    struct vector* node_vec;
+    struct vector* node_tree_vec;
     FILE *out_file;
 };
 
@@ -150,6 +153,87 @@ struct lex_process
     struct lex_process_functions *function;
 
     void *private;
+};
+
+enum
+{
+    PARSE_ALL_OK,
+    PARSE_GENEAL_ERROR
+};
+
+enum
+{
+    NODE_TYPE_EXPRESSION,
+    NODE_TYPE_EXPRESSION_PARENTHESES,
+    NODE_TYPE_NUMBER,
+    NODE_TYPE_IDENTIFIER,
+    NODE_TYPE_STRING,
+    NODE_TYPE_VARIABLE,
+    NODE_TYPE_VARIABLE_LIST,
+    NODE_TYPE_FUNCTION,
+    NODE_TYPE_BODY,
+    NODE_TYPE_STATEMENT_RETURN,
+    NODE_TYPE_STATEMENT_IF,
+    NODE_TYPE_STATEMENT_ELSE,
+    NODE_TYPE_STATEMENT_WHILE,
+    NODE_TYPE_STATEMENT_DO_WHILE,
+    NODE_TYPE_STATEMENT_FOR,
+    NODE_TYPE_STATEMENT_BREAK,
+    NODE_TYPE_STATEMENT_CONTINUE,
+    NODE_TYPE_STATEMENT_SWITCH,
+    NODE_TYPE_STATEMENT_CASE,
+    NODE_TYPE_STATEMENT_DEFAULT,
+    NODE_TYPE_STATEMENT_GOTO,
+
+    NODE_TYPE_UNARY,
+    NODE_TYPE_TENARY,
+    NODE_TYPE_LABEL,
+    NODE_TYPE_STRUCT,
+    NODE_TYPE_UNION,
+    NODE_TYPE_BRACKET,
+    NODE_TYPE_CAST,
+    NODE_TYPE_BLANK
+};
+
+enum
+{
+   NODE_FLAG_INSIDE_EXPRESSION = 0b00000001
+};
+
+
+struct node
+{
+    int type;
+    int flag;
+
+    struct pos pos;
+
+    struct node_binded
+    {
+        //Pointer to our body node.
+        struct node* owner;
+        //Pointer to the function this node is in.
+        struct node* function;
+    }binded;
+
+    union
+    {
+        struct exp
+        {
+            struct node* left;
+            struct node* right;
+            const char* op;
+        }exp;
+    };
+
+    union
+    {
+        char cval;
+        const char* sval;
+        unsigned int inum;
+        unsigned long lnum;
+        unsigned long long llnum;
+    };
 };
 
 int compile_file(const char *file_nem, const char *out_file, int flags);
@@ -170,6 +254,11 @@ void compiler_warning(struct compile_process *compiler, const char *msg, ...);
 struct token* token_create(struct token* _token);
 struct token* read_next_token();
 
+bool token_is_nl_or_comment_or_newline_seperator(struct token* token);
+bool token_is_symbol(struct token* token, char c);
+
+int parse(struct compile_process* process);
+
 /**
  * @brief Builds tokens for the input string
  * @param compiler
@@ -180,5 +269,32 @@ struct lex_process* tokens_build_for_string(struct compile_process* compiler, co
 
 
 bool token_is_keywords(struct token* token, const char* value);
+
+void node_set_vector(struct vector* vec, struct vector* root_vec);
+void node_push(struct node* node);
+struct node* node_peek_or_null();
+struct node* node_create(struct node* _node);
+struct node* node_pop();
+struct node* node_peek();
+struct node* make_exp_node(struct node* left_node, struct node* right_node, const char* op);
+struct node* node_peek_expressionable_or_null();
+
+bool node_is_expressionable_or_null(struct node* node);
+
+#define TOTAL_OPERATOR_GROUPS 14
+#define MAX_OPERATOR_IN_GROUP 12
+
+enum
+{
+    ASSOCIATIVITY_LEFT_TO_RIGHT,
+    ASSOCIATIVITY_RIGHT_TO_LEFT
+};
+
+struct expressionable_op_precedence_group
+{
+    char* operators[MAX_OPERATOR_IN_GROUP];
+    int associtivity;
+};
+
 
 #endif
