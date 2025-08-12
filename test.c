@@ -1,2 +1,1 @@
-int 
-while
+int x = 50;

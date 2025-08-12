@@ -1,4 +1,4 @@
-OBJECTS= ./build/compiler.o ./build/cprocess.o ./build/expressionable.o ./build/datatype.o ./build/node.o ./build/parser.o ./build/lexer.o ./build/token.o ./build/lex_process.o  ./build/helpers/buffer.o ./build/helpers/vector.o
+OBJECTS= ./build/compiler.o ./build/cprocess.o  ./build/symbol.o ./build/scope.o ./build/expressionable.o ./build/datatype.o ./build/node.o ./build/parser.o ./build/lexer.o ./build/token.o ./build/lex_process.o  ./build/helpers/buffer.o ./build/helpers/vector.o ./build/array.o
 INCLUDES= -I./
 
 all: ${OBJECTS}
@@ -21,6 +21,15 @@ all: ${OBJECTS}
 
 ./build/parser.o: ./parser.c
 	gcc ./parser.c ${INCLUDES} -o ./build/parser.o -g -c
+
+./build/symbol.o: ./symbol.c
+	gcc ./symbol.c ${INCLUDES} -o ./build/symbol.o -g -c
+
+./build/array.o: ./array.c
+	gcc ./array.c ${INCLUDES} -o ./build/array.o -g -c
+
+./build/scope.o: ./scope.c
+	gcc ./scope.c ${INCLUDES} -o ./build/scope.o -g -c
 
 ./build/datatype.o: ./parser.c
 	gcc ./datatype.c ${INCLUDES} -o ./build/datatype.o -g -c

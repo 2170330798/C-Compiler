@@ -123,6 +123,32 @@ enum {
     COMPILER_FAILED_WITH_EORRORS
 };
 
+struct scope
+{
+    int flag;
+
+    struct vector* entities;
+
+    size_t size;
+
+    struct scope* parent;
+};
+
+enum
+{
+    SYMBOL_TYPE_NODE,
+    SYMBOL_TYPE_NATIVE_FUNCTION,
+    SYMBOL_TYPE_UNKNOW
+};
+
+
+struct symbol
+{
+    const char* name;
+    int type;
+    void* data;
+};
+
 struct compile_process
 {
     //The flags in regard to how this file should be compiled
@@ -140,6 +166,20 @@ struct compile_process
     struct vector* node_vec;
     struct vector* node_tree_vec;
     FILE *out_file;
+
+    struct
+    {
+        struct scope* root;
+        struct scope* current;
+    }scope;
+
+    struct 
+    {
+        
+        struct vector* table;
+        struct vector* tables;
+    }symbols;
+
 };
 
 struct lex_process
@@ -200,6 +240,36 @@ enum
    NODE_FLAG_INSIDE_EXPRESSION = 0b00000001
 };
 
+struct array_brackets
+{
+    struct vector* n_brackets;
+};
+
+struct node;
+struct datatype
+{
+    int flag;
+    int type;
+
+    struct datatype* datatype_secondary;
+
+    const char* type_str;
+
+    size_t size;
+    int pointer_depth;
+
+    union 
+    {
+        struct node* struct_node;
+        struct node* union_node;
+    };
+
+    struct array
+    {
+        struct array_brackets* brackets;
+        size_t size;
+    }array;
+};
 
 struct node
 {
@@ -224,8 +294,26 @@ struct node
             struct node* right;
             const char* op;
         }exp;
-    };
 
+        struct var
+        {
+            struct datatype type;
+            const char* name;
+            struct node* val;
+        }var;
+
+        struct varlist
+        {
+            struct vector* list;
+        } var_list;
+
+        struct braket
+        {
+            struct node* inner;
+        }bracket;
+
+    };
+    
     union
     {
         char cval;
@@ -264,26 +352,6 @@ enum
     DATA_TYPE_STRUCT,
     DATA_TYPE_UNION,
     DATA_TYPE_UNKNOW
-};
-
-struct datatype
-{
-    int flag;
-    int type;
-
-    struct datatype* datatype_secondary;
-
-    const char* type_str;
-
-    size_t size;
-    int pointer_depth;
-
-    union 
-    {
-        struct node* struct_node;
-        struct node* union_node;
-    };
-    
 };
 
 enum
@@ -345,8 +413,9 @@ struct node* node_peek_or_null();
 struct node* node_create(struct node* _node);
 struct node* node_pop();
 struct node* node_peek();
-struct node* make_exp_node(struct node* left_node, struct node* right_node, const char* op);
+void make_exp_node(struct node* left_node, struct node* right_node, const char* op);
 struct node* node_peek_expressionable_or_null();
+void make_brackets_node(struct node* node);
 
 bool node_is_expressionable_or_null(struct node* node);
 
@@ -365,5 +434,15 @@ struct expressionable_op_precedence_group
     int associtivity;
 };
 
+struct scope* scope_alloc();
+struct scope* scope_create_root(struct compile_process* prcess);
 
+
+struct array_brackets* array_brackets_new();
+void array_brackets_free(struct array_brackets* brackets);
+void array_brackets_add(struct array_brackets* brackets, struct node* brackets_node);
+struct vector* array_brackets_node_vector(struct array_brackets*brackets);
+size_t array_brackets_caculate_size_from_index(struct datatype* dtype, struct array_brackets* brackets, int index);
+size_t array_brackets_caculate_szie(struct datatype* dtype, struct array_brackets* brackets);
+int array_total_indexes(struct datatype* dtype);
 #endif

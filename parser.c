@@ -46,10 +46,32 @@ static struct token* token_next()
 {
     printf("token_next is running\n");
     struct token* next_token = vector_peek_no_increment(current_process->token_vec);
+    if (next_token == NULL) {
+        fprintf(stderr, "Error: next_token is NULL!\n");
+        return NULL;
+    }
     parser_ignore_nl_or_comment(next_token);
     current_process->pos = next_token->pos;
     parser_last_token = next_token;
     return vector_peek(current_process->token_vec);
+}
+
+static void expect_symbol(char c)
+{
+    struct token* next_token = token_next();
+    if(!next_token || next_token->type != TOKEN_TYPE_SYMBOL || next_token->cval != c)
+    {
+        compiler_error(current_process, "Expecting symbol %c however something else was provided\n", c);
+    }
+}
+
+static void expect_op(const char* op)
+{
+    struct token* next_token = token_next();
+    if(!next_token || next_token->type != TOKEN_TYPE_OPERATOR || !S_EQ(next_token->sval, op))
+    {
+        compiler_error(current_process, "Expecting the operator %s but something else was provided\n", next_token->sval);
+    }
 }
 
 static struct token* token_peek_next()
@@ -345,10 +367,128 @@ void parse_datatype(struct datatype* dtype)
    
 }
 
+bool parser_is_int_valid_after_datatype(struct datatype* dtype)
+{
+    return dtype->type == DATA_TYPE_LONG || dtype->type == DATA_TYPE_FLOAT || dtype->type == DATA_TYPE_DOUBLE;
+}
+
+void parser_ignore_int(struct datatype* dtype)
+{
+
+    if (!token_is_keywords(token_peek_next(), "int"))
+    {
+        return ;
+    }
+    if(!parser_is_int_valid_after_datatype(dtype))
+    {
+        compiler_error(current_process, "You provide a secondary\"int\" type however its not supported with this current abbrevation\n");
+    }
+
+    token_next();
+}
+
+void parse_expressionable_root(struct history* history)
+{
+    parse_expressionable(history);
+    struct node* result_node = node_pop();
+    node_push(result_node);   
+}
+
+void make_variable_node(struct datatype* dtype, struct token* name_token, struct node* value_node)
+{
+    const char* name_str = NULL;
+    if(name_token)
+    {
+        name_str = name_token->sval;
+    }
+    node_create(&(struct node){.type=NODE_TYPE_VARIABLE, .var.name=name_token->sval, .var.type=*dtype, .var.val=value_node});
+}
+
+void make_variable_node_and_register(struct history* history, struct datatype* dtype, struct token* name_token, struct node* value_node)
+{
+     make_variable_node(dtype, name_token, value_node);
+     struct node* var_node = node_pop();
+     #warning "Remember to caculate scope offsets and push to the scope"
+     node_push(var_node);
+}
+
+struct array_brackets* parse_array_brackets(struct history* history)
+{
+    struct array_brackets* brackets = array_brackets_new();
+    while(token_next_is_operator("["))
+    {
+        expect_op("[");
+        if(token_is_symbol(token_peek_next(), ']'))
+        {
+            expect_symbol(']');
+            break;
+        }
+        parse_expressionable_root(history);
+        expect_symbol(']');
+        struct node* exp_node = node_pop();
+        make_brackets_node(exp_node);
+        struct node* brackets_node = node_pop();
+        array_brackets_add(brackets, brackets_node);
+    }
+    return brackets;
+}
+
+void parse_variable(struct datatype* dtype, struct token* name_token, struct history* history)
+{
+    struct node* value_node = NULL;
+    
+    struct array_brackets* brackets = NULL;
+    if(token_next_is_operator("["))
+    {
+        brackets = parse_array_brackets(history);
+        dtype->array.brackets = brackets;
+        dtype->array.size = array_brackets_caculate_szie(dtype, brackets);
+        dtype->flag |= DATATYPE_FLAG_IS_ARRAY;
+    }
+
+    if (token_next_is_operator("="))
+    {
+        token_next();
+        parse_expressionable_root(history);
+        value_node = node_pop();
+    }
+    make_variable_node_and_register(history, dtype, name_token, value_node);
+}
+
+void make_variable_list_node(struct vector* var_list_vec)
+{
+    node_create(&(struct node){.type=NODE_TYPE_VARIABLE_LIST, .var_list.list=var_list_vec});
+}
+
 void parse_varibale_function_or_struct_union(struct history* history)
 {
      struct datatype dtype;
      parse_datatype(&dtype);
+     parser_ignore_int(&dtype);
+     struct token* name_token = token_next();
+     if (name_token->type != TOKEN_TYPE_IDENTIFIER)
+     {
+        compiler_error(current_process, "Expecting a valid name for the given variable declaration\n");
+     }
+
+     parse_variable(&dtype, name_token, history);
+     if(token_is_operator(token_peek_next(), ","))
+     {
+           struct vector* var_list = vector_create(sizeof(struct node*));
+           struct node* var_node = node_pop();
+           vector_push(var_list, &var_node);
+           while(token_is_operator(token_peek_next(), ","))
+           {
+                token_next();
+                name_token = token_next();
+                parse_variable(&dtype, name_token, history);
+                var_node = node_pop();
+                vector_push(var_list, &var_node);
+           }
+
+           make_variable_list_node(var_list);
+     }
+     expect_symbol(';');
 }
 
 void parse_keywords(struct history* history)
@@ -506,6 +646,16 @@ void parse_expressionable(struct history *history)
     }
 }
 
+void parse_keywords_for_global()
+{
+    parse_keywords(history_begin(0));
+    struct node* node = node_pop();
+
+    node_push(node);
+}
+
+
+
 int parse_next()
 {
     struct token* token = token_peek_next();
@@ -520,6 +670,9 @@ int parse_next()
         case TOKEN_TYPE_IDENTIFIER:
         case TOKEN_TYPE_STRING:
             parse_expressionable(history_begin(0));
+        break;
+        case TOKEN_TYPE_KEYWORD:
+            parse_keywords_for_global();
         break;
     }
     return 0;
